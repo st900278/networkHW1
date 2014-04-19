@@ -2,16 +2,25 @@
 #include<netinet/in.h>
 #include<signal.h>
 #include<sys/wait.h>
+#include<stdio.h>
+#include<sys/socket.h>
+#include <arpa/inet.h>
 void echo(int cli){
 	char buffer[2048];
 	ssize_t n;
-	printf("Connection Closed. IP address is: %s port is: %d\n", inet_ntoa(client_addr.sin_addr), (int)ntohs(client_addr.sin_port));
 	FILE* fp;
-	fp = fopen("DownloadList.txt","r");
-	write(cli,"DownloadList.txt",16);
-	size_t ret = fread(buffer, 1, 2048, fp);
+	char buf[] = "downloadlist.txt";
+	write(cli,buf,sizeof(buf));
+	fp = fopen("hw1TestFile/DownloadList.txt","rb");
+	read(cli,buffer,2048);
+	memset(buffer, 0, sizeof(buffer));
+	
+	ssize_t ret = fread(buffer, 1, 2048, fp);
+	printf("%s\n",buffer);
 	while(ret>0){
-		write(cli, buffer, ret);
+		printf("yes");
+		write(cli, buffer, sizeof(buffer));
+		printf("yes");
 		ret = fread(buffer, 1, 2048, fp);
 	}
 	fclose(fp);
@@ -29,7 +38,7 @@ int main(int argc, char* argv[]){
     pid_t childpid;
     listenfd = socket(AF_INET,SOCK_STREAM,0);
     bzero(&server,sizeof(server));
-    server.sin_port = htons(argc[0]);
+    server.sin_port = htons(strtol(argv[1], NULL, 10));
     server.sin_family = AF_INET;
     server.sin_addr.s_addr = htonl(INADDR_ANY);
     bind(listenfd, (struct sockaddr*)&server, sizeof(server));
@@ -44,7 +53,7 @@ int main(int argc, char* argv[]){
         if((childpid = fork()) == 0){
             close(listenfd);
             echo(clientfd);
-            exit(0);
+            return 0;
         }
         close(clientfd);
     }

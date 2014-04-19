@@ -3,33 +3,62 @@
 #include<sys/types.h>
 #include<string.h>
 #include<netinet/in.h>
+#include<stdlib.h>
 #include<sys/stat.h>
+#include <arpa/inet.h>
 
-void filePart(int socketfd){
-	size_t ret;
+char* nameFetch(int socketfd){
+	ssize_t ret;
 	char buffer[2148];
+	char *s;
+	ret = read(socketfd, buffer, 2148);
+
+	s = malloc(ret * sizeof(char));
+	
+	
+	strcpy(s, buffer);
+	//printf("%s",buffer);
+	return s;
+}
+
+void fileTrans(int socketfd, char* fileName){
+	FILE* fp = fopen(fileName, "wb");
+	ssize_t ret;
+	char buffer[2148];
+	char buf[] = "success";
+	printf("waiting\n");
+	write(socketfd, buf, sizeof(buf));
 	ret = read(socketfd, buffer, 2048);
-	FILE* fp = fopen(buffer, "w");
-	ret = read(socketfd, buffer, 2048);
+	printf("testst");
+	printf("%s",buffer);
 	while(ret >0){
-		fwrite(buffer, 1, ret, fp);
-		ret = read(socketfd, buffer, 2048); 
+		fwrite(buffer, 1, sizeof(buffer), fp);
+		ret = read(socketfd, buffer, 2048);
 	}
 	fclose(fp);
-	
 }
-int main(){
+
+int main(int argc, char* argv[]){
+	if(argc<4){
+		printf("Format wrong.\n");
+		return 0;
+	}
 	int socketfd;
 	int i;
 	struct sockaddr_in dest;
-	socketfd[i] = socket(AF_INET,SOCK_STREAM,0);
+	char* fileName;
+	socketfd = socket(AF_INET,SOCK_STREAM,0);
 	bzero(&dest,sizeof(dest));
-	dest.sin_port = htons(9877);
+	dest.sin_port = htons(strtol(argv[2], NULL, 10));
 	dest.sin_family = AF_INET;
-	dest.sin_addr.s_addr = inet_addr("127.0.0.1");
-	connect(socketfd[i],(struct sockaddr*)&dest, sizeof(dest));
-	mkdir("./download",S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
-	filePart(socketfd);
+	dest.sin_addr.s_addr = inet_addr(argv[1]);
+	connect(socketfd,(struct sockaddr*)&dest, sizeof(dest));
+	mkdir("./Download",S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
+	
+	
+	fileName = nameFetch(socketfd);
+	//printf("%s", fileName);
+	fileTrans(socketfd, fileName);
 	close(socketfd);
 	return 0;
    
