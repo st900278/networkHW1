@@ -9,19 +9,18 @@ void echo(int cli){
 	char buffer[2048];
 	ssize_t n;
 	FILE* fp;
+	char tmp[2148];
 	char buf[] = "downloadlist.txt";
 	write(cli,buf,sizeof(buf));
 	fp = fopen("hw1TestFile/DownloadList.txt","rb");
 	read(cli,buffer,2048);
 	memset(buffer, 0, sizeof(buffer));
 	
-	ssize_t ret = fread(buffer, 1, 2048, fp);
-	printf("%s\n",buffer);
-	while(ret>0){
-		printf("yes");
-		write(cli, buffer, sizeof(buffer));
-		printf("yes");
-		ret = fread(buffer, 1, 2048, fp);
+	ssize_t ret;
+	while(!feof(fp)){
+		ret = fread(buffer, sizeof(char), 2048, fp);
+		printf("%s\n",buffer);
+		write(cli, buffer, ret);
 	}
 	fclose(fp);
 	

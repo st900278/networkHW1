@@ -26,14 +26,13 @@ void fileTrans(int socketfd, char* fileName){
 	ssize_t ret;
 	char buffer[2148];
 	char buf[] = "success";
-	printf("waiting\n");
 	write(socketfd, buf, sizeof(buf));
-	ret = read(socketfd, buffer, 2048);
-	printf("testst");
-	printf("%s",buffer);
-	while(ret >0){
-		fwrite(buffer, 1, sizeof(buffer), fp);
+	memset(buffer, 0, sizeof(buffer));
+	while(1){
 		ret = read(socketfd, buffer, 2048);
+		if(ret == 0)break;
+		printf("%s",buffer);
+		fwrite(buffer, sizeof(char), sizeof(buffer), fp);
 	}
 	fclose(fp);
 }
