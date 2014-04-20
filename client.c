@@ -5,6 +5,7 @@
 #include<netinet/in.h>
 #include<stdlib.h>
 #include<sys/stat.h>
+#include<unistd.h>
 #include <arpa/inet.h>
 #define ms(); memset(buffer, 0, sizeof(buffer));
 char buffer[2148];

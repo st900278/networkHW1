@@ -4,6 +4,7 @@
 #include<sys/wait.h>
 #include<stdio.h>
 #include<sys/socket.h>
+#include<unistd.h>
 #include<stdlib.h>
 #include <arpa/inet.h>
 #define ms(); memset(buffer, 0, sizeof(buffer));
