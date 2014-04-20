@@ -2,71 +2,72 @@
 #include<netinet/in.h>
 #include<signal.h>
 #include<sys/wait.h>
+#include<sys/types.h>
+#include<sys/stat.h>
 #include<stdio.h>
 #include<sys/socket.h>
+#include<limits.h>
 #include<unistd.h>
 #include<stdlib.h>
 #include <arpa/inet.h>
-#define ms(); memset(buffer, 0, sizeof(buffer));
-char buffer[2148];
+char buffer[CHAR_MAX];
+char buffer2[2148];
 int fexist(char * path){
 	FILE* fp = fopen(path,"r");
-	if(fp)	return 1;
-	else 	return 0;
+	if(fp){
+		fclose(fp);
+		return 1;
+	}
+	else {
+		fclose(fp);
+		return 0;
+	}
+}
+int fsize(char* path){
+	struct stat st;
+	stat(path,&st);
+	//printf("%d", st.st_size);
+	return st.st_size;
 }
 void echo(int cli){
-	ssize_t n;
+	ssize_t n,ret;
 	FILE* fp;
 	char tmp[2148];
-	char buf[] = "downloadlist.txt";
-	write(cli,buf,sizeof(buf));
+	struct stat st;
+	int fileSize;
+	char listname[] = "downloadlist.txt";
+	fileSize =  fsize("hw1TestFile/DownloadList.txt");
+	sprintf(tmp, "%8d", strlen(listname));
+	//sprintf(tmp,"%8d",listname,fileSize);
+	
+	write(cli,tmp, strlen(tmp));
+	write(cli,listname, strlen(listname));
+	sprintf(tmp,"%8d",fileSize);
+	write(cli,tmp,strlen(tmp));
 	fp = fopen("hw1TestFile/DownloadList.txt","rb");
-	ms();
-	read(cli,buffer,2048);
-	
-	
-	ssize_t ret;
-	while(!feof(fp)){
-		ms();
-		ret = fread(buffer, sizeof(char), 2048, fp);
-		printf("%s\n",buffer);
-		write(cli, buffer, ret);
-	}
-	ret = fread(buffer, sizeof(char), 2048, fp);
-	write(cli, buffer, ret);
-	ms();
-	//printf("%d",sizeof(buffer));
-	//write(cli,buffer, 0);
 
+	ret = fread(buffer, sizeof(char), fileSize, fp);
+	write(cli, buffer, ret);
 	fclose(fp);
-	printf("here\n");
-	while(1){
-		ms();
-		ret = read(cli, buffer, 2048);
-		puts(buffer);
-		strcpy(tmp, "success");
-		write(cli, tmp, sizeof(tmp));
-		/*
-		if(ret<=0)continue;
-		printf("get");
-		char* s;
-		if(!fexist(buffer)){
-			strcpy("FILE not exist", buffer);
-			write(cli, buffer, sizeof(buffer));
-		}
-		else{
-			strcpy("FILE exist", buffer);
-			write(cli, buffer, sizeof(buffer));
-		}
-		printf("%s",buffer);
-		/*
-		s = malloc(ret * sizeof(char));
-		strcpy(s, buffer);
-		read(cli, buffer, 2048);
-		FILE* fp = fopen(s,"r");
-		while((ret = fread(buffer, sizeof(char), 2048,fp))>0){
-			write(cli, buffer, ret);
-		}*/
+	// file transfer
+	memset(buffer, 0, sizeof(buffer));
+	while(ret = read(cli,buffer,8)){ //read filename size
+		printf("filename size:%d\n",strtol(buffer, NULL, 10));
+		ret = read(cli, buffer, strtol(buffer, NULL, 10)); // filename
+		printf("NeedFile : %s\n", buffer);
+		printf("ret = %zd\n",ret);
+		int transFileSize = fsize(buffer);
+		memset(tmp,0,sizeof(tmp));
+		sprintf(tmp, "%8d", transFileSize);
+		printf("strlen of tmp: %d\n",strlen(tmp));
+		
+		write(cli, tmp, strlen(tmp));
+		printf("tmp: %s\n",tmp);
+		FILE* fp = fopen(buffer,"rb");
+		ret = fread(buffer, sizeof(char), fileSize, fp);
+		write(cli, buffer, ret);
+		fclose(fp);
+		
 	}
 
 }

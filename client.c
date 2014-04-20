@@ -5,47 +5,53 @@
 #include<netinet/in.h>
 #include<stdlib.h>
 #include<sys/stat.h>
+#include<limits.h>
 #include<unistd.h>
 #include <arpa/inet.h>
-#define ms(); memset(buffer, 0, sizeof(buffer));
-char buffer[2148];
+
+char buffer[CHAR_MAX];
 char* nameFetch(int socketfd){
 	ssize_t ret;
 	char *s;
-	ms();
-	ret = read(socketfd, buffer, 2148);
-
+	memset(buffer, 0, sizeof(buffer));
+	ret = read(socketfd, buffer, 8);
+	printf("read:%d\n",strtol(buffer, NULL, 10));
+	ret = read(socketfd, buffer, strtol(buffer, NULL, 10));
+	printf("%s\n",buffer);
 	s = malloc(ret * sizeof(char));
 	strcpy(s, buffer);
 	//printf("%s",buffer);
 	return s;
 }
-
 void fileTrans(int socketfd, char* fileName){
-	FILE* fp = fopen(fileName, "wb");
 	ssize_t ret;
-	
-	char buf[] = "success";
-	write(socketfd, buf, sizeof(buf));
-	while(1){
-		ms();
-		ret = read(socketfd, buffer, 2048);
-		printf("ret = %zd\n",ret);
-		if(ret <= 0)break;
-		printf("%s\n",buffer);
-		fwrite(buffer, sizeof(char), ret, fp);
-		fflush(fp);
-	}
-	printf("test");
+	int fileSize;
+	ret = read(socketfd, buffer, 8);
+	printf("%s\n",fileName);
+	FILE* fp = fopen(fileName, "wb");
+	ret = read(socketfd, buffer, strtol(buffer, NULL, 10));
+	fwrite(buffer, sizeof(char), ret, fp);
 	fclose(fp);
 }
 void fileReq(int socketfd, char * fileName){
-	printf("%s",fileName);
 	ssize_t ret;
-	char buffer[2148];
-	write(socketfd, fileName, sizeof(fileName));
-	ret = read(socketfd, buffer, 2048);
-	printf("%s",buffer);
+	char tmp[1024];
+	char tmpName[1024] = "hw1TestFile/";
+	strcat(tmpName,fileName);
+	printf("%s\n",tmpName);
+	sprintf(tmp, "%8d", strlen(tmpName));
+	printf("fileName length: %d, %d\n", strlen(tmp), strlen(tmpName));
+	//memset(buffer, 0, sizeof(buffer));
+	write(socketfd, tmp, strlen(tmp));
+	write(socketfd, tmpName, strlen(tmpName));
+	printf("wait\n");
+	ret = read(socketfd, buffer, 8);               // file size
+	printf("%d", strtol(buffer, NULL, 10));
+	ret = recv(socketfd, buffer, strtol(buffer, NULL, 10),MSG_WAITALL);
+	FILE* fp = fopen(fileName, "wb");
+	fwrite(buffer, sizeof(char), ret, fp);
+	fclose(fp);
+	
 	//fileTrans(socketfd, fileName);
 	
 }
@@ -57,7 +63,7 @@ int main(int argc, char* argv[]){
 	int socketfd;
 	int i;
 	struct sockaddr_in dest;
-	char* fileName;
+	char* fileData;
 	char fileRequest[10000];
 	socketfd = socket(AF_INET,SOCK_STREAM,0);
 	bzero(&dest,sizeof(dest));
@@ -68,10 +74,10 @@ int main(int argc, char* argv[]){
 	mkdir("./Download",S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
 	
 	
-	fileName = nameFetch(socketfd);
+	fileData = nameFetch(socketfd);
 	//printf("%s", fileName);
-	fileTrans(socketfd, fileName);
-	printf("test");
+	fileTrans(socketfd, fileData);
+	printf("Download file name");
 	scanf("%s", fileRequest);
 	fileReq(socketfd, fileRequest);
 	close(socketfd);
