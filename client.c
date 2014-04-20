@@ -41,11 +41,12 @@ void fileReq(int socketfd, char * fileName){
 	printf("%s\n",tmpName);
 	sprintf(tmp, "%8d", strlen(tmpName));
 	printf("fileName length: %d, %d\n", strlen(tmp), strlen(tmpName));
-	//memset(buffer, 0, sizeof(buffer));
+	memset(buffer, 0, sizeof(buffer));
 	write(socketfd, tmp, strlen(tmp));
 	write(socketfd, tmpName, strlen(tmpName));
 	printf("wait\n");
 	ret = read(socketfd, buffer, 8);               // file size
+	printf("%zd",ret);
 	printf("%d", strtol(buffer, NULL, 10));
 	ret = recv(socketfd, buffer, strtol(buffer, NULL, 10),MSG_WAITALL);
 	FILE* fp = fopen(fileName, "wb");
