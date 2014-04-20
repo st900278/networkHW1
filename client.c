@@ -6,16 +6,15 @@
 #include<stdlib.h>
 #include<sys/stat.h>
 #include <arpa/inet.h>
-
+#define ms(); memset(buffer, 0, sizeof(buffer));
+char buffer[2148];
 char* nameFetch(int socketfd){
 	ssize_t ret;
-	char buffer[2148];
 	char *s;
+	ms();
 	ret = read(socketfd, buffer, 2148);
 
 	s = malloc(ret * sizeof(char));
-	
-	
 	strcpy(s, buffer);
 	//printf("%s",buffer);
 	return s;
@@ -24,19 +23,31 @@ char* nameFetch(int socketfd){
 void fileTrans(int socketfd, char* fileName){
 	FILE* fp = fopen(fileName, "wb");
 	ssize_t ret;
-	char buffer[2148];
+	
 	char buf[] = "success";
 	write(socketfd, buf, sizeof(buf));
-	memset(buffer, 0, sizeof(buffer));
 	while(1){
+		ms();
 		ret = read(socketfd, buffer, 2048);
-		if(ret == 0)break;
-		printf("%s",buffer);
-		fwrite(buffer, sizeof(char), sizeof(buffer), fp);
+		printf("ret = %zd\n",ret);
+		if(ret <= 0)break;
+		printf("%s\n",buffer);
+		fwrite(buffer, sizeof(char), ret, fp);
+		fflush(fp);
 	}
+	printf("test");
 	fclose(fp);
 }
-
+void fileReq(int socketfd, char * fileName){
+	printf("%s",fileName);
+	ssize_t ret;
+	char buffer[2148];
+	write(socketfd, fileName, sizeof(fileName));
+	ret = read(socketfd, buffer, 2048);
+	printf("%s",buffer);
+	//fileTrans(socketfd, fileName);
+	
+}
 int main(int argc, char* argv[]){
 	if(argc<4){
 		printf("Format wrong.\n");
@@ -46,6 +57,7 @@ int main(int argc, char* argv[]){
 	int i;
 	struct sockaddr_in dest;
 	char* fileName;
+	char fileRequest[10000];
 	socketfd = socket(AF_INET,SOCK_STREAM,0);
 	bzero(&dest,sizeof(dest));
 	dest.sin_port = htons(strtol(argv[2], NULL, 10));
@@ -58,6 +70,9 @@ int main(int argc, char* argv[]){
 	fileName = nameFetch(socketfd);
 	//printf("%s", fileName);
 	fileTrans(socketfd, fileName);
+	printf("test");
+	scanf("%s", fileRequest);
+	fileReq(socketfd, fileRequest);
 	close(socketfd);
 	return 0;
    

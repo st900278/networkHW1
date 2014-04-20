@@ -4,26 +4,70 @@
 #include<sys/wait.h>
 #include<stdio.h>
 #include<sys/socket.h>
+#include<stdlib.h>
 #include <arpa/inet.h>
+#define ms(); memset(buffer, 0, sizeof(buffer));
+char buffer[2148];
+int fexist(char * path){
+	FILE* fp = fopen(path,"r");
+	if(fp)	return 1;
+	else 	return 0;
+}
 void echo(int cli){
-	char buffer[2048];
 	ssize_t n;
 	FILE* fp;
 	char tmp[2148];
 	char buf[] = "downloadlist.txt";
 	write(cli,buf,sizeof(buf));
 	fp = fopen("hw1TestFile/DownloadList.txt","rb");
+	ms();
 	read(cli,buffer,2048);
-	memset(buffer, 0, sizeof(buffer));
+	
 	
 	ssize_t ret;
 	while(!feof(fp)){
+		ms();
 		ret = fread(buffer, sizeof(char), 2048, fp);
 		printf("%s\n",buffer);
 		write(cli, buffer, ret);
 	}
+	ret = fread(buffer, sizeof(char), 2048, fp);
+	write(cli, buffer, ret);
+	ms();
+	//printf("%d",sizeof(buffer));
+	//write(cli,buffer, 0);
+
 	fclose(fp);
-	
+	printf("here\n");
+	while(1){
+		ms();
+		ret = read(cli, buffer, 2048);
+		puts(buffer);
+		strcpy(tmp, "success");
+		write(cli, tmp, sizeof(tmp));
+		/*
+		if(ret<=0)continue;
+		printf("get");
+		char* s;
+		if(!fexist(buffer)){
+			strcpy("FILE not exist", buffer);
+			write(cli, buffer, sizeof(buffer));
+		}
+		else{
+			strcpy("FILE exist", buffer);
+			write(cli, buffer, sizeof(buffer));
+		}
+		printf("%s",buffer);
+		/*
+		s = malloc(ret * sizeof(char));
+		strcpy(s, buffer);
+		read(cli, buffer, 2048);
+		FILE* fp = fopen(s,"r");
+		while((ret = fread(buffer, sizeof(char), 2048,fp))>0){
+			write(cli, buffer, ret);
+		}*/
+	}
+
 }
 void sig4waitpid(int signo){
 	int stat;
