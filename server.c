@@ -50,7 +50,7 @@ void echo(int cli){
 	write(cli, buffer, ret);
 	fclose(fp);
 	// file transfer
-	memset(buffer, 0, sizeof(buffer));
+	
 	while(ret = read(cli,buffer,8)){ //read filename size
 		printf("filename size:%d\n",(int)strtol(buffer, NULL, 10));
 		ret = read(cli, buffer, strtol(buffer, NULL, 10)); // filename
