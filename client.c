@@ -9,7 +9,7 @@
 #include<unistd.h>
 #include <arpa/inet.h>
 
-char buffer[CHAR_MAX];
+char buffer[65536];
 char* nameFetch(int socketfd){
 	ssize_t ret;
 	char *s;
@@ -17,7 +17,7 @@ char* nameFetch(int socketfd){
 	ret = read(socketfd, buffer, 8);
 	printf("read:%d\n",strtol(buffer, NULL, 10));
 	ret = read(socketfd, buffer, strtol(buffer, NULL, 10));
-	printf("%s\n",buffer);
+	//printf("%s\n",buffer);
 	s = malloc(ret * sizeof(char));
 	strcpy(s, buffer);
 	//printf("%s",buffer);
@@ -37,6 +37,7 @@ void fileReq(int socketfd, char * fileName){
 	ssize_t ret;
 	char tmp[1024];
 	char tmpName[1024] = "hw1TestFile/";
+	memset(buffer, 0, sizeof(buffer));
 	strcat(tmpName,fileName);
 	printf("%s\n",tmpName);
 	sprintf(tmp, "%8d", strlen(tmpName));
@@ -46,8 +47,8 @@ void fileReq(int socketfd, char * fileName){
 	write(socketfd, tmpName, strlen(tmpName));
 	printf("wait\n");
 	ret = read(socketfd, buffer, 8);               // file size
-	printf("%zd",ret);
-	printf("%d", strtol(buffer, NULL, 10));
+	printf("test%zd\n",ret);
+	printf("strtol:%d\n", strtol(buffer, NULL, 10));
 	ret = recv(socketfd, buffer, strtol(buffer, NULL, 10),MSG_WAITALL);
 	FILE* fp = fopen(fileName, "wb");
 	fwrite(buffer, sizeof(char), ret, fp);
@@ -78,9 +79,11 @@ int main(int argc, char* argv[]){
 	fileData = nameFetch(socketfd);
 	//printf("%s", fileName);
 	fileTrans(socketfd, fileData);
-	printf("Download file name");
-	scanf("%s", fileRequest);
-	fileReq(socketfd, fileRequest);
+	while(1){
+		printf("Download file name");
+		scanf("%s", fileRequest);
+		fileReq(socketfd, fileRequest);
+	}
 	close(socketfd);
 	return 0;
    

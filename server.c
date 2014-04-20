@@ -10,7 +10,7 @@
 #include<unistd.h>
 #include<stdlib.h>
 #include <arpa/inet.h>
-char buffer[CHAR_MAX];
+char buffer[65536];
 char buffer2[2148];
 int fexist(char * path){
 	FILE* fp = fopen(path,"r");
@@ -37,7 +37,7 @@ void echo(int cli){
 	int fileSize;
 	char listname[] = "downloadlist.txt";
 	fileSize =  fsize("hw1TestFile/DownloadList.txt");
-	sprintf(tmp, "%8d", strlen(listname));
+	sprintf(tmp, "%8zd", strlen(listname));
 	//sprintf(tmp,"%8d",listname,fileSize);
 	
 	write(cli,tmp, strlen(tmp));
@@ -52,19 +52,21 @@ void echo(int cli){
 	// file transfer
 	memset(buffer, 0, sizeof(buffer));
 	while(ret = read(cli,buffer,8)){ //read filename size
-		printf("filename size:%d\n",strtol(buffer, NULL, 10));
+		printf("filename size:%d\n",(int)strtol(buffer, NULL, 10));
 		ret = read(cli, buffer, strtol(buffer, NULL, 10)); // filename
 		printf("NeedFile : %s\n", buffer);
 		printf("ret = %zd\n",ret);
 		int transFileSize = fsize(buffer);
 		memset(tmp,0,sizeof(tmp));
+		printf("%d",transFileSize);
 		sprintf(tmp, "%8d", transFileSize);
-		printf("strlen of tmp: %d\n",strlen(tmp));
+		printf("%s",tmp);
+		printf("strlen of tmp: %zd\n",strlen(tmp));
 		
 		write(cli, tmp, strlen(tmp));
 		printf("tmp: %s\n",tmp);
 		FILE* fp = fopen(buffer,"rb");
-		ret = fread(buffer, sizeof(char), fileSize, fp);
+		ret = fread(buffer, sizeof(char), transFileSize, fp);
 		write(cli, buffer, ret);
 		fclose(fp);
 		
