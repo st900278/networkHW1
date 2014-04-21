@@ -9,53 +9,62 @@
 #include<unistd.h>
 #include <arpa/inet.h>
 
-char buffer[65536];
-char* nameFetch(int socketfd){
+char buffer[20000000];
+void nameFetch(int socketfd, char* downloadListName){
 	ssize_t ret;
 	char *s;
+	char tmp[1024];
+	sprintf(tmp, "%8d", strlen(downloadListName));
 	memset(buffer, 0, sizeof(buffer));
-	ret = read(socketfd, buffer, 8);
-	printf("read:%d\n",strtol(buffer, NULL, 10));
-	ret = read(socketfd, buffer, strtol(buffer, NULL, 10));
-	//printf("%s\n",buffer);
-	s = malloc(ret * sizeof(char));
-	strcpy(s, buffer);
-	//printf("%s",buffer);
-	return s;
+	write(socketfd, tmp, strlen(tmp));
+	write(socketfd, downloadListName, strlen(downloadListName));
 }
 void fileTrans(int socketfd, char* fileName){
 	ssize_t ret;
 	int fileSize;
 	ret = read(socketfd, buffer, 8);
-	printf("%s\n",fileName);
-	FILE* fp = fopen(fileName, "wb");
+	char completeName[1024] = "Download/";
+	strcat(completeName,fileName);
+	FILE* fp = fopen(completeName, "wb");
 	ret = read(socketfd, buffer, strtol(buffer, NULL, 10));
 	fwrite(buffer, sizeof(char), ret, fp);
 	fclose(fp);
+	printf("DownloadList download success\n");
 }
 void fileReq(int socketfd, char * fileName){
 	ssize_t ret;
 	char tmp[1024];
-	char tmpName[1024] = "hw1TestFile/";
 	memset(buffer, 0, sizeof(buffer));
-	strcat(tmpName,fileName);
-	printf("%s\n",tmpName);
-	sprintf(tmp, "%8d", strlen(tmpName));
-	printf("fileName length: %d, %d\n", strlen(tmp), strlen(tmpName));
+	memset(tmp, 0 , sizeof(tmp));
+	sprintf(tmp, "%8d", strlen(fileName));
+	write(socketfd, tmp , strlen(tmp));
+	write(socketfd, fileName, strlen(fileName));
+	printf("Start download: %s\n", fileName);
+	ret = read(socketfd, buffer, 8);
+	if(buffer[7] == '0')return;
+	ret = read(socketfd, buffer, 8);
+	int length = strtol(buffer, NULL, 10);
 	memset(buffer, 0, sizeof(buffer));
-	write(socketfd, tmp, strlen(tmp));
-	write(socketfd, tmpName, strlen(tmpName));
-	printf("wait\n");
-	ret = read(socketfd, buffer, 8);               // file size
-	printf("test%zd\n",ret);
-	printf("strtol:%d\n", strtol(buffer, NULL, 10));
-	ret = recv(socketfd, buffer, strtol(buffer, NULL, 10),MSG_WAITALL);
-	FILE* fp = fopen(fileName, "wb");
-	fwrite(buffer, sizeof(char), ret, fp);
+	char tmppp[1024] = "Download/";
+	strcat(tmppp, fileName);
+	FILE* fp = fopen(tmppp, "wb");
+	int tmpSize = length;
+	while(1){
+		memset(buffer, 0, sizeof(buffer));
+		if(tmpSize>2048){
+			ret = read(socketfd, buffer, 2048);
+			fwrite(buffer, sizeof(char), ret, fp);
+			tmpSize -=2048;
+			fflush(fp);
+		}
+		else{
+			ret = read(socketfd, buffer, tmpSize);
+			fwrite(buffer, sizeof(char), ret, fp);
+			break;
+		}
+	}
+	printf("send success\n");
 	fclose(fp);
-	
-	//fileTrans(socketfd, fileName);
-	
 }
 int main(int argc, char* argv[]){
 	if(argc<4){
@@ -76,12 +85,31 @@ int main(int argc, char* argv[]){
 	mkdir("./Download",S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
 	
 	
-	fileData = nameFetch(socketfd);
-	//printf("%s", fileName);
-	fileTrans(socketfd, fileData);
+	nameFetch(socketfd, argv[3]);
+	fileTrans(socketfd, argv[3]);
+	char tmp2[1024];
+	ssize_t n;
+	strcpy(tmp2, "Download/");
+	strcat(tmp2, argv[3]);
+	FILE* fp = fopen(tmp2,"r");
+	if(fp == NULL){
+		printf("download list crashed\n");
+		return 0;
+	}
 	while(1){
-		printf("Download file name");
-		scanf("%s", fileRequest);
+		char sig[32];
+		memset(fileRequest, 0, sizeof(fileRequest));
+		if(fgets(fileRequest, 1024, fp)==NULL){
+			sprintf(sig,"%8d",0);
+			write(socketfd, sig, 8);
+			break;
+		}
+		sprintf(sig,"%8d",1);
+		write(socketfd,sig, 8);
+		int a = strlen(fileRequest);
+		if(a<=1)continue;
+		fileRequest[a-1] = '\0';
+		fileRequest[a-2] = '\0';
 		fileReq(socketfd, fileRequest);
 	}
 	close(socketfd);
