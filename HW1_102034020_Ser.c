@@ -13,14 +13,11 @@
 char buffer[20000000];
 char buffer2[2148];
 int fexisted(char * path){
-	printf("fexist: %s\n", path);
 	FILE* fp = fopen(path,"r");
 	if(fp == NULL){
-
 		return 0;
 	}
 	else {
-		printf("yese\n");
 		fclose(fp);
 		return 1;
 	}
@@ -28,7 +25,6 @@ int fexisted(char * path){
 int fsize(char* path){
 	struct stat st;
 	stat(path,&st);
-	printf("st.st_size is %d\n", st.st_size);
 	return st.st_size;
 }
 void echo(int cli){
@@ -44,12 +40,7 @@ void echo(int cli){
 	//strcpy(listname, "hw1TestFile/");
 	strcat(listname, buffer2);
 	fileSize =  fsize(listname);
-	//sprintf(tmp, "%8zd", strlen(listname));
-	//sprintf(tmp,"%8d",listname,fileSize);
-	
-	/*write(cli,tmp, strlen(tmp));
-	write(cli,listname, strlen(listname));
-	*/
+
 
 	sprintf(tmp,"%8d",fileSize);
 	write(cli,tmp,strlen(tmp));
@@ -63,34 +54,36 @@ void echo(int cli){
 	while(1){ //read filename size
 		memset(buffer,0,sizeof(buffer));
 		ret = read(cli,buffer,8);
+		//printf("%s\n", buffer);
 		if(buffer[7] == '0')break;
+		else if(buffer[7] == '2')continue;
+		memset(buffer, 0, sizeof(buffer));
 		ret = read(cli,buffer,8);
+		int lenn = strtol(buffer, NULL, 10);
+		memset(buffer, 0, sizeof(buffer));
+		ret = read(cli, buffer, lenn); 
 		
-		ret = read(cli, buffer, strtol(buffer, NULL, 10)); 
 		char tmpp[1024] = "";
 		strcat(tmpp,buffer);
-		printf("NeedFile : %s\n", tmpp);
-		printf("test\n");
+		printf("Downloading : %s\n", tmpp);
 		memset(buffer, 0, sizeof(buffer));
 		if(!fexisted(tmpp)){
 			sprintf(buffer, "%8d",0);
+			printf("File not exist.\n");
 			write(cli, buffer, 8);
-			break;
+			memset(buffer,0,sizeof(buffer));
+			continue;
 		}
 		else{
 			sprintf(buffer, "%8d",1);
 			write(cli, buffer, 8);
 		}
-		printf("ret = %zd\n",ret);
 		int transFileSize = fsize(tmpp);
 		memset(tmp,0,sizeof(tmp));
-		printf("transFileSize = %d\n",transFileSize);
 		sprintf(tmp, "%8d", transFileSize);
-		printf("%s\n",tmp);
-		printf("strlen of tmp: %zd\n",strlen(tmp));
 		memset(buffer, 0, sizeof(buffer));
 		write(cli, tmp, strlen(tmp));
-		printf("tmp: %s\n",tmp);
+		printf("File Size : %s\n",tmp);
 		FILE* fp = fopen(tmpp,"rb");
 		int tmpSize = transFileSize;
 		while(1){
@@ -106,8 +99,6 @@ void echo(int cli){
 				break;
 			}
 		}
-		//ret = fread(buffer, sizeof(char), transFileSize, fp);
-		//write(cli, buffer, ret);
 		fclose(fp);
 		
 	}
@@ -117,7 +108,6 @@ void sig4waitpid(int signo){
 	int stat;
 	pid_t pid;
 	while(pid = waitpid(-1, &stat,WCONTINUED)>0);
-	printf("child %d terminated\n",pid);
 }
 int main(int argc, char* argv[]){
     int listenfd;
@@ -140,7 +130,7 @@ int main(int argc, char* argv[]){
         if((childpid = fork()) == 0){
             close(listenfd);
             echo(clientfd);
-            printf("IP address%s port %d terminated\n", inet_ntoa(client_addr.sin_addr), (int)ntohs(client_addr.sin_port));
+            printf("IP address %s port %d terminated\n", inet_ntoa(client_addr.sin_addr), (int)ntohs(client_addr.sin_port));
             return 0;
         }
         close(clientfd);

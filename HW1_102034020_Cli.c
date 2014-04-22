@@ -8,13 +8,14 @@
 #include<limits.h>
 #include<unistd.h>
 #include <arpa/inet.h>
+#include<time.h>
 
 char buffer[20000000];
 void nameFetch(int socketfd, char* downloadListName){
 	ssize_t ret;
 	char *s;
 	char tmp[1024];
-	sprintf(tmp, "%8d", strlen(downloadListName));
+	sprintf(tmp, "%8zd", strlen(downloadListName));
 	memset(buffer, 0, sizeof(buffer));
 	write(socketfd, tmp, strlen(tmp));
 	write(socketfd, downloadListName, strlen(downloadListName));
@@ -29,19 +30,25 @@ void fileTrans(int socketfd, char* fileName){
 	ret = read(socketfd, buffer, strtol(buffer, NULL, 10));
 	fwrite(buffer, sizeof(char), ret, fp);
 	fclose(fp);
-	printf("DownloadList download success\n");
+	printf("Download list is downloaded\n");
 }
-void fileReq(int socketfd, char * fileName){
+char* fileReq(int socketfd, char * fileName, clock_t t1 ){
 	ssize_t ret;
 	char tmp[1024];
+	char* logText;
 	memset(buffer, 0, sizeof(buffer));
 	memset(tmp, 0 , sizeof(tmp));
-	sprintf(tmp, "%8d", strlen(fileName));
+	sprintf(tmp, "%8zd", strlen(fileName));
 	write(socketfd, tmp , strlen(tmp));
 	write(socketfd, fileName, strlen(fileName));
 	printf("Start download: %s\n", fileName);
 	ret = read(socketfd, buffer, 8);
-	if(buffer[7] == '0')return;
+	if(buffer[7] == '0'){
+		logText = (char*)malloc(67*sizeof(char));
+		sprintf(logText,"|%15s |      failed |              - |              - |\n",fileName);
+		printf("Download failed\n");
+		return logText;
+	}
 	ret = read(socketfd, buffer, 8);
 	int length = strtol(buffer, NULL, 10);
 	memset(buffer, 0, sizeof(buffer));
@@ -49,6 +56,7 @@ void fileReq(int socketfd, char * fileName){
 	strcat(tmppp, fileName);
 	FILE* fp = fopen(tmppp, "wb");
 	int tmpSize = length;
+	printf("Size : %d\n", tmpSize);
 	while(1){
 		memset(buffer, 0, sizeof(buffer));
 		if(tmpSize>2048){
@@ -63,8 +71,12 @@ void fileReq(int socketfd, char * fileName){
 			break;
 		}
 	}
-	printf("send success\n");
+	printf("Download success.\n");
+	clock_t t2 = clock();
+	logText = (char*)malloc(67*sizeof(char));
+	sprintf(logText,"|%15s |%12s |%15lf |%15d |\n",fileName ,"success", (t2-t1)/(double)(CLOCKS_PER_SEC), length);
 	fclose(fp);
+	return logText;
 }
 int main(int argc, char* argv[]){
 	if(argc<4){
@@ -74,6 +86,7 @@ int main(int argc, char* argv[]){
 	int socketfd;
 	int i;
 	struct sockaddr_in dest;
+	FILE* flog;
 	char* fileData;
 	char fileRequest[10000];
 	socketfd = socket(AF_INET,SOCK_STREAM,0);
@@ -83,6 +96,7 @@ int main(int argc, char* argv[]){
 	dest.sin_addr.s_addr = inet_addr(argv[1]);
 	connect(socketfd,(struct sockaddr*)&dest, sizeof(dest));
 	mkdir("./Download",S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
+	flog = fopen("log.txt", "w");
 	
 	
 	nameFetch(socketfd, argv[3]);
@@ -96,22 +110,36 @@ int main(int argc, char* argv[]){
 		printf("download list crashed\n");
 		return 0;
 	}
+	fputs("|           file |      status |     time(secs) |    size(bytes) |\n",flog);
+	fputs("|================|=============|================|================|\n", flog);
 	while(1){
+		clock_t ti;
 		char sig[32];
 		memset(fileRequest, 0, sizeof(fileRequest));
+		clock_t t1 = clock();
 		if(fgets(fileRequest, 1024, fp)==NULL){
 			sprintf(sig,"%8d",0);
 			write(socketfd, sig, 8);
 			break;
 		}
+		else if(strlen(fileRequest)<=2){
+			sprintf(sig,"%8d",2);
+			write(socketfd, sig, 8);
+			continue;
+		}
 		sprintf(sig,"%8d",1);
 		write(socketfd,sig, 8);
 		int a = strlen(fileRequest);
-		if(a<=1)continue;
+		//printf("length: %d\n",a);
 		fileRequest[a-1] = '\0';
 		fileRequest[a-2] = '\0';
-		fileReq(socketfd, fileRequest);
+		char *t;
+		t = fileReq(socketfd, fileRequest, t1);
+		fputs(t,flog);
+		fputs("|----------------|-------------|----------------|----------------|\n", flog);
 	}
+	//printf("Download successfully\n");
+	fclose(fp);
 	close(socketfd);
 	return 0;
    
